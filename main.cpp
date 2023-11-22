@@ -53,6 +53,10 @@ int main(){
     
     double cost = my_net.evaluate( &input , &output ) ; 
 
+    layer * target = &output ;
+
+    my_net.calculate_gradients( &input, &target ) ;
+
     std::cout << "cost : " << cost << " \n" ;
 
     

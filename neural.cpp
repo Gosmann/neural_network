@@ -159,6 +159,7 @@ void neural_net::feedforward() {
 }
 
 double neural_net::evaluate( layer * input, layer * output ){
+    
     int i;
     double loss = 0;
     
@@ -182,6 +183,27 @@ double neural_net::evaluate( layer * input, layer * output ){
     return loss ;
 }
 
+void neural_net::calculate_gradients( layer * input, layer * target ){
+
+    int i;
+    
+    // apply inputs to the network
+    for( i = 0 ; i < input->neurons.size() ; i++ ){
+        layers[0]->neurons[i]->value = input->neurons[i]->value ; 
+        layers[0]->neurons[i]->activated = input->neurons[i]->activated ; 
+    }
+
+    // feedforwads all input changes
+    feedforward(); 
+
+    // calculate gradient for each layer (back to front)
+    for( i = layers.size() - 1 ; i > 0 ; i-- ){
+    
+        layers[i]->calculate_gradients( layer * target ) ; 
+
+    }
+
+}
 
 // default layer constructor
 layer::layer( int num_of_neurons ) {
@@ -247,7 +269,7 @@ layer::layer( int num_of_neurons, layer::type input_layer_type ) {
 
 } ;
 
-void layer::compile(){
+void layer::compile( ){
     int i;
 
     //std::cout << "start compiling layer num " << index << " \n" ;
@@ -261,7 +283,7 @@ void layer::compile(){
     }
 }
 
-void layer::feedforward(){
+void layer::feedforward( ){
     int i;
 
     // feedforwards for all neurons
@@ -278,6 +300,17 @@ void layer::feedforward(){
 
 }
 
+void layer::calculate_gradients( layer * target ){
+    
+    int i;
+
+    // considers all neurons in the output layer    
+    for( i = 0 ; i < neurons.size() ; i++ ){
+        neurons[i]->calculate_gradients_output( target->neurons[i] ) ;
+    }
+
+} 
+
 // default neuron constructor
 neuron::neuron( layer * creator ){
     
@@ -287,6 +320,7 @@ neuron::neuron( layer * creator ){
     
     value = 0 ;
     activated = 0 ;
+    gradient = 0 ; 
 
     // holds weight data
     //weights = std::vector<double> ( 0 ) ;
@@ -364,5 +398,28 @@ void neuron::feedforward() {
     }
 
     //std::cout << value << "\n" ;
+
+}
+
+void neuron::calculate_gradient( neuron * target ){
+    
+    int i ;
+
+    switch( my_layer->layer_type ){
+
+        case layer::output :
+            
+            gradient = (activated - target->activated) * activated * (1 - activated ) ;
+
+            break ;
+        
+        case layer::input :
+            
+            double sum = 0 ;
+            // considers all further neurons
+
+            break ;
+
+    }
 
 }

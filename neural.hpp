@@ -19,6 +19,7 @@ void wait();
 class neuron ;
 class layer ;
 class neural_net ;
+class weight ;
 
 class neuron {
 
@@ -41,6 +42,8 @@ class neuron {
         double value ; 
         double activated ;
 
+        double gradient ; 
+
         // vector for holding the weigths with respect to this neuron       
         std::vector<double> weights ;
 
@@ -52,6 +55,10 @@ class neuron {
         void compile(  ) ;
 
         void feedforward(  ) ;
+
+        // functions that calculates the gradients for each weight
+        void calculate_gradient( neuron * ) ; 
+       
 
 } ;
 
@@ -82,6 +89,10 @@ class layer {
 
         // calculates neuron values all the way from start to finish
         void feedforward( void ) ;
+
+        // calculates the gradients
+        void calculate_gradients( layer * ) ;
+        
 } ;
 
 
@@ -115,6 +126,9 @@ class neural_net {
 
         // calculate the cost function
         double evaluate( layer * , layer * ) ; 
+
+        // function that calculates the gradient for each neuron
+        void calculate_gradients( layer * , layer * ) ;
 } ;
 
 /*
