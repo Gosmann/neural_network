@@ -3,6 +3,7 @@
 
 // functions
 void print_hello();
+void wait();
 
 /*  things the library should implement
 
@@ -28,7 +29,7 @@ class neuron {
 
         // TODO declare this enum outiside class declaration
         enum activation {       
-            sigmoid             
+            sigmoid, linear         
         };
 
         // choose neuron activation function
@@ -38,12 +39,14 @@ class neuron {
         int index ;
 
         double value ; 
+        double activated ;
 
         // vector for holding the weigths with respect to this neuron       
         std::vector<double> weights ;
 
         // constructor
         neuron( layer * ) ;
+        neuron( double ) ;
 
         // compile neuron (attributes weights to it)
         void compile(  ) ;
@@ -72,6 +75,7 @@ class layer {
 
         // constructor
         layer( int ) ;      // a layer always has a number of neurons
+        layer( int, type ) ;      // a layer always has a number of neurons
 
         // compile a layer (assigns weights)
         void compile();
@@ -108,6 +112,9 @@ class neural_net {
 
         // calculates neuron values all the way from start to finish
         void feedforward( void );
+
+        // calculate the cost function
+        double evaluate( layer * , layer * ) ; 
 } ;
 
 /*

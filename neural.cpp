@@ -9,8 +9,32 @@ void print_hello(){
     
 }
 
-// constructors
+void wait(){
+    
+    while(1){
+        int i;
+        for (i = 0 ; i < 3 ; i++){
+            std::cout << "." ;
+            std::cout.flush();
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
 
+        std::cout << "\r" ;
+        
+        for (i = 0 ; i < 10 ; i++){
+            std::cout << " " ;
+            std::cout.flush();
+        }
+        std::cout << "\r" ;
+        std::cout.flush();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    }
+
+}
+
+
+// constructors
 // default neural_net constructor
 neural_net::neural_net() {
     
@@ -21,8 +45,8 @@ neural_net::neural_net() {
 void neural_net::add_input_layer( int num_of_neurons ){
 
     // heap allocation
-    layer * new_layer = new layer ( num_of_neurons ) ;
-    new_layer->layer_type = layer::input ;
+    layer * new_layer = new layer ( num_of_neurons, layer::input ) ;
+    
     new_layer->index = layers.size() ;
     new_layer->my_net = this ;
     
@@ -58,8 +82,8 @@ void neural_net::add_hidden_layer( int num_of_neurons ){
 void neural_net::add_output_layer( int num_of_neurons ){
 
     // heap allocation
-    layer * new_layer = new layer ( num_of_neurons ) ;
-    new_layer->layer_type = layer::output ;
+    layer * new_layer = new layer ( num_of_neurons, layer::output ) ;
+    
     new_layer->index = layers.size() ;
     new_layer->my_net = this ;
     
@@ -99,9 +123,14 @@ void neural_net::summary(){
     std::cout << "\t layers: " << layers.size() << "\n";
     for(i = 0 ; i < layers.size() ; i++){
         std::cout << "\t\t layer : [ " << i << " ] : [ " << layers[i]->neurons.size() << " ] \n" ;
-        
+
+
         for( j = 0 ; j < layers[i]->neurons.size() ; j++ ){
             std::cout << "\t\t\t neuron : [ " << j << " ] : [ " << layers[i]->neurons[j]->weights.size() << " ] \n" ;
+
+            if( i == 0 ){   // print input values
+                std::cout << "\t\t\t\t input  : [ " << j << " ] : [ " << layers[i]->neurons[j]->activated << " ] \n" ;    
+            }
 
             for( k = 0 ; k < layers[i]->neurons[j]->weights.size() ; k++ ){
                 std::cout << "\t\t\t\t weigth : [ " << k << " ] : [ " << layers[i]->neurons[j]->weights[k] << " ] \n" ;
@@ -109,6 +138,7 @@ void neural_net::summary(){
             }
         }
     }
+
 
     std::cout << "Total parameters to learn : " << total_weights << "\n" ;
 
@@ -118,7 +148,7 @@ void neural_net::feedforward() {
 
     int i ;
 
-    for( i = 1 ; i < layers.size() ; i++ ){
+    for( i = 0 ; i < layers.size() ; i++ ){
         
         std::cout << "\n" << "feedforward layer : " << i << " \n";
 
@@ -126,6 +156,30 @@ void neural_net::feedforward() {
 
     }
 
+}
+
+double neural_net::evaluate( layer * input, layer * output ){
+    int i;
+    double loss = 0;
+    
+    // apply inputs to netork
+    for( i = 0 ; i < input->neurons.size() ; i++ ){
+        layers[0]->neurons[i]->value = input->neurons[i]->value ; 
+        layers[0]->neurons[i]->activated = input->neurons[i]->activated ; 
+    }
+    
+
+    for(i = 0 ; i < output->neurons.size() ; i++ ){
+
+        double error = output->neurons[i]->activated - layers.back()->neurons[i]->activated ; 
+
+        loss += error * error ;
+
+    }
+
+    loss *= 0.5 ;   // see formula for details
+
+    return loss ;
 }
 
 
@@ -144,6 +198,44 @@ layer::layer( int num_of_neurons ) {
         // heap allocation
         neuron * new_neuron = new neuron( this ) ;  
         new_neuron->index = neurons.size() ;
+
+        // stack allocation
+        //neuron new_neuron( creator ) ;
+        //new_neuron.index = neurons.size() ;
+
+        neurons.push_back( new_neuron ) ;         
+
+    }
+
+} ;
+
+// default layer constructor
+layer::layer( int num_of_neurons, layer::type input_layer_type ) {
+        
+    // any layer starts out with type input    
+    layer_type = input_layer_type ;
+    
+    // creates a layer with specified number of neurons
+    //std::vector<neuron> neurons_vect (num_of_neurons) ;
+    int i;
+
+    for(i = 0 ; i < num_of_neurons ; i++ ){
+        
+        // heap allocation
+        neuron * new_neuron = new neuron( this ) ;  
+        new_neuron->index = neurons.size() ;
+
+        switch( layer_type ){
+            case input:
+                new_neuron->neuron_activation = neuron::linear ;    
+                break;
+            case hidden:
+                new_neuron->neuron_activation = neuron::sigmoid ;    
+                break;
+            case output:
+                new_neuron->neuron_activation = neuron::linear ;    
+                break;
+        }
 
         // stack allocation
         //neuron new_neuron( creator ) ;
@@ -175,8 +267,9 @@ void layer::feedforward(){
     // feedforwards for all neurons
     for( i = 0 ; i < neurons.size() ; i++){
 
-        std::cout << "feedforwarding neuron: " << i << "\n" ;
-    
+        std::cout << "feedforwarding neuron: " << i << " - type:  " << 
+            layer_type <<" \n" ;
+        
         //layer * prev_layer = my_net->layers[ index - 1 ] ;
 
         neurons[i]->feedforward(  );
@@ -189,16 +282,14 @@ void layer::feedforward(){
 neuron::neuron( layer * creator ){
     
     // defines standard activation function
-    neuron::neuron_activation = neuron::sigmoid ;
-
+    
     my_layer = creator ;
     
     value = 0 ;
+    activated = 0 ;
 
     // holds weight data
     //weights = std::vector<double> ( 0 ) ;
-    
-
     
 } ;
 
@@ -237,25 +328,41 @@ void neuron::compile(  ){
 
 }
 
-
 void neuron::feedforward() {
 
     int i ;
 
-    value = 0;
 
-    for( i = 0 ; i < weights.size() - 1; i++ ){
+    if( weights.size() > 0 ){
+
+        for( i = 0 ; i < weights.size() - 1; i++ ){
         
-        //std::cout << "actuall neuron " << i << "\n";
+            //std::cout << "actuall neuron " << i << "\n";
 
-        layer * prev_layer = my_layer->my_net->layers[ my_layer->index - 1 ] ;
+            layer * prev_layer = my_layer->my_net->layers[ my_layer->index - 1 ] ;
 
-        value += weights[i] * prev_layer->neurons[i]->value ;
+            value += weights[i] * prev_layer->neurons[i]->activated ;
+
+        }
+
+        value += weights[i] * 1.0 ;     // bias term
+    
+    }
+
+
+    // calculate activation
+    switch( neuron_activation ){
+        case sigmoid :
+            activated = 1.0 / ( 1.0 + std::exp( -1.0 * value ) ) ;
+            break;
+        
+        case linear :
+            std::cout << "neuron::feedforward output \n";
+            activated = value ; 
+            break;
 
     }
 
-    value += weights[i] * 1.0 ;     // bias term
-    
     //std::cout << value << "\n" ;
 
 }
