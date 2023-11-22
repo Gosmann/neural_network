@@ -1,5 +1,7 @@
 #include <iostream>
 #include <random>
+#include <chrono>
+#include <thread>
 
 #include "neural.hpp"
 
@@ -63,8 +65,8 @@ void neural_net::add_input_layer( int num_of_neurons ){
 void neural_net::add_hidden_layer( int num_of_neurons ){
 
     // heap allocation
-    layer * new_layer = new layer ( num_of_neurons ) ;
-    new_layer->layer_type = layer::hidden ;
+    layer * new_layer = new layer ( num_of_neurons, layer::hidden ) ;
+    
     new_layer->index = layers.size() ;
     new_layer->my_net = this ;
     
@@ -150,7 +152,7 @@ void neural_net::feedforward() {
 
     for( i = 0 ; i < layers.size() ; i++ ){
         
-        std::cout << "\n" << "feedforward layer : " << i << " \n";
+        //std::cout << "\n" << "feedforward layer : " << i << " \n";
 
         layers[i]->feedforward();
 
@@ -166,15 +168,26 @@ double neural_net::evaluate( layer * input, layer * output ){
     // apply inputs to netork
     for( i = 0 ; i < input->neurons.size() ; i++ ){
         layers[0]->neurons[i]->value = input->neurons[i]->value ; 
-        layers[0]->neurons[i]->activated = input->neurons[i]->activated ; 
+        //layers[0]->neurons[i]->activated = input->neurons[i]->activated ; 
     }
     
+    // feedforwads all input changes
+    feedforward() ;
+
+    //output->feedforward();
 
     for(i = 0 ; i < output->neurons.size() ; i++ ){
 
+        std::cout << "target : " << output->neurons[i]->activated << " \n";
+
+        //                   my_net.layers.back()->neurons[0]->activated
+        std::cout << "actual : " << layers.back()->neurons[0]->activated << " \n";
+
         double error = output->neurons[i]->activated - layers.back()->neurons[i]->activated ; 
 
-        loss += error * error ;
+        std::cout << "Error : " << error << " \n";
+
+        loss += (error * error) ;
 
     }
 
@@ -196,10 +209,12 @@ void neural_net::calculate_gradients( layer * input, layer * target ){
     // feedforwads all input changes
     feedforward(); 
 
+    //target->feedforward();
+
     // calculate gradient for each layer (back to front)
     for( i = layers.size() - 1 ; i > 0 ; i-- ){
     
-        layers[i]->calculate_gradients( layer * target ) ; 
+        layers[i]->calculate_gradients( target ) ; 
 
     }
 
@@ -209,7 +224,7 @@ void neural_net::calculate_gradients( layer * input, layer * target ){
 layer::layer( int num_of_neurons ) {
         
     // any layer starts out with type input    
-    layer::layer_type = layer::input ;
+    //layer::layer_type = layer::input ;
     
     // creates a layer with specified number of neurons
     //std::vector<neuron> neurons_vect (num_of_neurons) ;
@@ -255,7 +270,7 @@ layer::layer( int num_of_neurons, layer::type input_layer_type ) {
                 new_neuron->neuron_activation = neuron::sigmoid ;    
                 break;
             case output:
-                new_neuron->neuron_activation = neuron::linear ;    
+                new_neuron->neuron_activation = neuron::sigmoid ;    
                 break;
         }
 
@@ -289,8 +304,8 @@ void layer::feedforward( ){
     // feedforwards for all neurons
     for( i = 0 ; i < neurons.size() ; i++){
 
-        std::cout << "feedforwarding neuron: " << i << " - type:  " << 
-            layer_type <<" \n" ;
+        //std::cout << "feedforwarding neuron: " << i << " - type:  " << 
+        //    layer_type <<" \n" ;
         
         //layer * prev_layer = my_net->layers[ index - 1 ] ;
 
@@ -306,7 +321,7 @@ void layer::calculate_gradients( layer * target ){
 
     // considers all neurons in the output layer    
     for( i = 0 ; i < neurons.size() ; i++ ){
-        neurons[i]->calculate_gradients_output( target->neurons[i] ) ;
+        neurons[i]->calculate_gradient( target->neurons[i] ) ;
     }
 
 } 
@@ -362,25 +377,27 @@ void neuron::compile(  ){
 
 }
 
-void neuron::feedforward() {
+void neuron::feedforward(  ) {
 
     int i ;
 
+    value = 0 ;
 
-    if( weights.size() > 0 ){
+    // TODO make this better
+    for( i = 0 ; i < weights.size() ; i++ ){
+    
+        //std::cout << "actuall neuron " << i << "\n";
 
-        for( i = 0 ; i < weights.size() - 1; i++ ){
-        
-            //std::cout << "actuall neuron " << i << "\n";
-
-            layer * prev_layer = my_layer->my_net->layers[ my_layer->index - 1 ] ;
-
-            value += weights[i] * prev_layer->neurons[i]->activated ;
-
+        // last iteration
+        if( i + 1 == weights.size() ){
+            value += weights[i] * 1.0 ;     // bias term
         }
 
-        value += weights[i] * 1.0 ;     // bias term
-    
+        else{
+            layer * prev_layer = my_layer->my_net->layers[ my_layer->index - 1 ] ;
+            value += weights[i] * prev_layer->neurons[i]->activated ;
+        }
+
     }
 
 
@@ -391,7 +408,7 @@ void neuron::feedforward() {
             break;
         
         case linear :
-            std::cout << "neuron::feedforward output \n";
+            // std::cout << "neuron::feedforward input \n";
             activated = value ; 
             break;
 
@@ -404,19 +421,45 @@ void neuron::feedforward() {
 void neuron::calculate_gradient( neuron * target ){
     
     int i ;
-
+    
     switch( my_layer->layer_type ){
 
         case layer::output :
             
-            gradient = (activated - target->activated) * activated * (1 - activated ) ;
+            switch ( neuron_activation ) {
+                case sigmoid:                    
+                    gradient = ( activated - target->activated ) * 
+                        activated * (1 - activated ) ;    
+                    break;
+                
+                case linear:
+                    gradient = ( activated - target->activated ) ;
+                    break;
+            }
 
             break ;
         
-        case layer::input :
+        case layer::hidden :
             
             double sum = 0 ;
             // considers all further neurons
+            layer * next_layer = my_layer->my_net->layers[ my_layer->index + 1 ] ;
+
+            for( int i = 0 ; i < next_layer->neurons.size() ; i++ ){
+
+                sum += next_layer->neurons[i]->gradient * next_layer->neurons[i]->weights[ index ] ;
+
+            }
+
+            switch ( neuron_activation ) {
+                case sigmoid:                    
+                    gradient = sum * activated * (1 - activated ) ;    
+                    break;
+                
+                case linear:
+                    gradient = sum ;
+                    break;
+            }
 
             break ;
 
