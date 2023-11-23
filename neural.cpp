@@ -178,14 +178,12 @@ double neural_net::evaluate( layer * input, layer * output ){
 
     for(i = 0 ; i < output->neurons.size() ; i++ ){
 
-        std::cout << "target : " << output->neurons[i]->activated << " \n";
-
-        //                   my_net.layers.back()->neurons[0]->activated
-        std::cout << "actual : " << layers.back()->neurons[0]->activated << " \n";
+        //std::cout << "target : " << output->neurons[i]->activated << " \n";
+        //std::cout << "actual : " << layers.back()->neurons[0]->activated << " \n";
 
         double error = output->neurons[i]->activated - layers.back()->neurons[i]->activated ; 
 
-        std::cout << "Error : " << error << " \n";
+        //std::cout << "Error : " << error << " \n";
 
         loss += (error * error) ;
 
@@ -215,6 +213,19 @@ void neural_net::calculate_gradients( layer * input, layer * target ){
     for( i = layers.size() - 1 ; i > 0 ; i-- ){
     
         layers[i]->calculate_gradients( target ) ; 
+
+    }
+
+}
+
+void neural_net::calculate_delta_weights( double learning_rate ){
+
+    int i;
+    
+    // calculate delta weights for each layer (back to front)
+    for( i = layers.size() - 1 ; i > 0 ; i-- ){
+    
+        layers[i]->calculate_delta_weights( learning_rate ) ; 
 
     }
 
@@ -326,6 +337,19 @@ void layer::calculate_gradients( layer * target ){
 
 } 
 
+void layer::calculate_delta_weights( double learning_rate ){
+
+    int i;
+
+    // calculate delta weights for all neurons
+    for( i = 0 ; i < neurons.size() ; i++){
+
+        neurons[i]->calculate_delta_weights( learning_rate );
+        
+    }
+
+}
+
 // default neuron constructor
 neuron::neuron( layer * creator ){
     
@@ -367,6 +391,15 @@ void neuron::compile(  ){
         
         weights.push_back( number ) ;
         //std::cout << number << " \n";
+
+    }
+
+    // create delta_weights_vectors
+    for(i = 0 ; i < weights.size() ; i++ ){
+
+        std::vector<double> * deltas = new std::vector<double> ;
+
+        delta_weights.push_back( deltas ) ; 
 
     }
     
@@ -465,4 +498,34 @@ void neuron::calculate_gradient( neuron * target ){
 
     }
 
+}
+
+void neuron::calculate_delta_weights( double learning_rate ){
+    
+    int i;
+
+    double prev_activated = 0;
+
+    // calculates for all weights
+    for( i = 0 ; i < weights.size() ; i++ ){
+    
+        // last iteration
+        if( ( i + 1 ) == weights.size() ){
+            // bias
+            prev_activated = 1.0 ;
+        }
+
+        else{
+            layer * prev_layer = my_layer->my_net->layers[ my_layer->index - 1 ] ;
+            
+            prev_activated = prev_layer->neurons[ i ]->activated ; 
+        
+        }
+
+        double delta_weight = -1.0 * learning_rate * gradient * prev_activated ;
+
+        delta_weights[i]->push_back( delta_weight ) ;
+
+    }
+  
 }

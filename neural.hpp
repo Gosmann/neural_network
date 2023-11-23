@@ -47,6 +47,9 @@ class neuron {
         // vector for holding the weigths with respect to this neuron       
         std::vector<double> weights ;
 
+        // 
+        std::vector< std::vector<double> * > delta_weights ; 
+
         // constructor
         neuron( layer * ) ;
         neuron( double ) ;
@@ -58,6 +61,8 @@ class neuron {
 
         // functions that calculates the gradients for each weight
         void calculate_gradient( neuron * ) ; 
+
+        void calculate_delta_weights( double ) ;
        
 
 } ;
@@ -92,6 +97,8 @@ class layer {
 
         // calculates the gradients
         void calculate_gradients( layer * ) ;
+
+        void calculate_delta_weights( double ) ;
         
 } ;
 
@@ -129,6 +136,8 @@ class neural_net {
 
         // function that calculates the gradient for each neuron
         void calculate_gradients( layer * , layer * ) ;
+
+        void calculate_delta_weights( double ) ;
 } ;
 
 /*
