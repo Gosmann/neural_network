@@ -58,12 +58,14 @@ class neuron {
         void compile(  ) ;
 
         void feedforward(  ) ;
+        void input_feedforward(  ) ;
 
         // functions that calculates the gradients for each weight
         void calculate_gradient( neuron * ) ; 
 
         void calculate_delta_weights( double ) ;
-       
+
+        void apply_delta_weights( void );
 
 } ;
 
@@ -99,6 +101,8 @@ class layer {
         void calculate_gradients( layer * ) ;
 
         void calculate_delta_weights( double ) ;
+
+        void apply_delta_weights( void );
         
 } ;
 
@@ -138,6 +142,22 @@ class neural_net {
         void calculate_gradients( layer * , layer * ) ;
 
         void calculate_delta_weights( double ) ;
+
+        void apply_delta_weights( void );
+
+        void apply_inputs( layer * ); 
+} ;
+
+class dataset {
+
+    public :
+
+        std::vector<layer *> data ;       // x
+        std::vector<layer *> labels ;     // y
+
+        dataset();
+
+        void create_xor() ; 
 } ;
 
 /*

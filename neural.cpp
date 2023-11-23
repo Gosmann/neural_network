@@ -171,8 +171,13 @@ double neural_net::evaluate( layer * input, layer * output ){
         //layers[0]->neurons[i]->activated = input->neurons[i]->activated ; 
     }
     
+    //std::cout << "layer 0 size (must be 2) : " << layers[0]->neurons.size() << " \n" ;
+
     // feedforwads all input changes
     feedforward() ;
+
+    //std::cout << "* layer 0 neuron 0 : activated : " << layers[0]->neurons[0]->activated << "\n";
+    //std::cout << "* layer 0 neuron 1 : activated : " << layers[0]->neurons[1]->activated << "\n" ;  
 
     //output->feedforward();
 
@@ -226,6 +231,33 @@ void neural_net::calculate_delta_weights( double learning_rate ){
     for( i = layers.size() - 1 ; i > 0 ; i-- ){
     
         layers[i]->calculate_delta_weights( learning_rate ) ; 
+
+    }
+
+}
+
+void neural_net::apply_inputs( layer * input_layer ){
+
+    int i; 
+
+    for( i = 0 ; i < input_layer->neurons.size() ; i++ ){
+
+        layers[0]->neurons[i]->value = input_layer->neurons[i]->value ; 
+
+    }
+
+    feedforward();
+
+}
+
+void neural_net::apply_delta_weights( void ){
+
+    int i;
+    
+    // calculate delta weights for each layer (back to front)
+    for( i = layers.size() - 1 ; i > 0 ; i-- ){
+    
+        layers[i]->apply_delta_weights(); 
 
     }
 
@@ -312,6 +344,8 @@ void layer::compile( ){
 void layer::feedforward( ){
     int i;
 
+    //std::cout << "size(must be 2): " << neurons.size() << "\n" ;
+
     // feedforwards for all neurons
     for( i = 0 ; i < neurons.size() ; i++){
 
@@ -319,8 +353,13 @@ void layer::feedforward( ){
         //    layer_type <<" \n" ;
         
         //layer * prev_layer = my_net->layers[ index - 1 ] ;
-
-        neurons[i]->feedforward(  );
+        if( layer_type == layer::input ){
+            neurons[i]->input_feedforward(  );
+        }
+        else{
+            neurons[i]->feedforward(  );
+        }
+        
         
     }
 
@@ -345,6 +384,19 @@ void layer::calculate_delta_weights( double learning_rate ){
     for( i = 0 ; i < neurons.size() ; i++){
 
         neurons[i]->calculate_delta_weights( learning_rate );
+        
+    }
+
+}
+
+void layer::apply_delta_weights( void ){
+
+    int i;
+
+    // calculate delta weights for all neurons
+    for( i = 0 ; i < neurons.size() ; i++){
+
+        neurons[i]->apply_delta_weights(  );
         
     }
 
@@ -383,7 +435,8 @@ void neuron::compile(  ){
 
     // random number based on memory access
     std::default_random_engine generator( (uint64_t)this );     
-    std::uniform_real_distribution<double> distribution(0.0,1.0);
+    //std::default_random_engine generator( 1234 );     
+    std::uniform_real_distribution<double> distribution(-0.5,0.5);
 
     for(i = 0 ; i < prev_layer->neurons.size() + 1; i++ ){
         
@@ -406,8 +459,6 @@ void neuron::compile(  ){
     // add bias term (adds above)
     // weights.push_back( 1.0 ) ;
     //std::cout << 1.0 << " \n";   
-
-
 }
 
 void neuron::feedforward(  ) {
@@ -447,7 +498,28 @@ void neuron::feedforward(  ) {
 
     }
 
-    //std::cout << value << "\n" ;
+    //std::cout << "feed forward neuron : " << value << "\n" ;
+
+}
+
+void neuron::input_feedforward(  ) {
+
+    int i ;
+
+    // calculate activation
+    switch( neuron_activation ){
+        case sigmoid :
+            activated = 1.0 / ( 1.0 + std::exp( -1.0 * value ) ) ;
+            break;
+        
+        case linear :
+            // std::cout << "neuron::feedforward input \n";
+            activated = value ; 
+            break;
+
+    }
+
+    //std::cout << "feed forward neuron : " << value << "\n" ;
 
 }
 
@@ -528,4 +600,81 @@ void neuron::calculate_delta_weights( double learning_rate ){
 
     }
   
+}
+
+void neuron::apply_delta_weights(void){
+
+    int i, j;
+
+    double prev_activated = 0;
+
+    // evaluates one weight at a time
+    for( i = 0 ; i < delta_weights.size() ; i++ ){
+    
+        double sum = 0 ;
+        int batch_size = delta_weights[i]->size();
+
+        // evalates all deltas from a batch
+        /*
+        for( j = ( batch_size ); j > 0 ; j-- ){
+            sum += delta_weights[i][0][j - 1] ;  
+            delta_weights[i][0].pop_back() ;  
+        }
+        
+        double average = ( sum / (double)(batch_size) ) ;
+        */
+
+        weights[i] += delta_weights[i][0][0]  ;
+        delta_weights[i][0].pop_back() ;  
+
+    }
+
+}
+
+dataset::dataset( void ){
+
+    create_xor() ; 
+
+}
+
+void dataset::create_xor( void ){
+
+    layer * input = new layer( 2, layer::input ) ;
+    input->neurons[0]->value = 0.0 ;
+    input->neurons[1]->value = 0.0 ;
+    data.push_back( input );
+
+    input = new layer( 2, layer::input ) ;
+    input->neurons[0]->value = 0.0 ;
+    input->neurons[1]->value = 1.0 ;
+    data.push_back( input );
+
+    input = new layer( 2, layer::input ) ;
+    input->neurons[0]->value = 1.0 ;
+    input->neurons[1]->value = 0.0 ;
+    data.push_back( input );
+
+    input = new layer( 2, layer::input ) ;
+    input->neurons[0]->value = 1.0 ;
+    input->neurons[1]->value = 1.0 ;
+    data.push_back( input );
+
+    //
+    layer * output = new layer( 1, layer::output ) ;
+    output->neurons[0]->activated = 0.0 ;
+    labels.push_back( output );
+
+    output = new layer( 1, layer::output ) ;
+    output->neurons[0]->activated = 1.0 ;
+    labels.push_back( output );
+
+    output = new layer( 1, layer::output ) ;
+    output->neurons[0]->activated = 1.0 ;
+    labels.push_back( output );
+
+    output = new layer( 1, layer::output ) ;
+    output->neurons[0]->activated = 0.0 ;
+    labels.push_back( output );
+
+
 }

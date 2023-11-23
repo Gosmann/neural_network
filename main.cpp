@@ -11,7 +11,7 @@ int main(){
     // adds a layer with 784 ( 28 * 28 ) neurons
     my_net.add_input_layer( 2 ) ;   
 
-    my_net.add_hidden_layer( 2 ) ;
+    my_net.add_hidden_layer( 4 ) ;
 
     my_net.add_output_layer( 1 ) ;    // adds output layer
 
@@ -28,66 +28,92 @@ int main(){
     my_net.feedforward() ;  
     
     // displays interesting info
-    my_net.summary() ;
+    //my_net.summary() ;
         
-    std::cout << "layer 1 neuron 0 : \n";
-    std::cout << "output value : " << my_net.layers[1]->neurons[0]->value << "\n";
-    std::cout << "output activated: " << my_net.layers[1]->neurons[0]->activated << "\n";
+    dataset xor_dataset ;  
 
-    std::cout << "layer 1 neuron 1 : \n";
-    std::cout << "output value : " << my_net.layers[1]->neurons[1]->value << "\n";
-    std::cout << "output activated: " << my_net.layers[1]->neurons[1]->activated << "\n";
+    int i;
+    for(i = 0 ; i < 10000 ; i++){
+        
+        //my_net.summary() ;
 
-    std::cout << "layer 2 neuron 0 : \n";
-    std::cout << "output value : " << my_net.layers.back()->neurons[0]->value << "\n";
-    std::cout << "output activated: " << my_net.layers.back()->neurons[0]->activated << "\n";
+        //std::srand( i ) ;
+        //int random_index = ( std::rand() % 4 ) ;
+        int random_index = i % 4 ; 
 
-    layer input ( 2, layer::input ) ;
-    input.neurons[0]->value = 0.0 ;
-    input.neurons[1]->value = 0.0 ;
+        layer * input = xor_dataset.data[ random_index ] ;         // generates nums from 0 to 3
+        layer * output = xor_dataset.labels[ random_index ] ;      // generates nums from 0 to 3
+        
+        //std::cout << i << "\n"; 
+
+        double cost = my_net.evaluate( input , output ) ; 
+        
+        /*
+        std::cout << "layer 0 neuron 0 : activated : " << my_net.layers[0]->neurons[0]->activated << "\n";
+        std::cout << "layer 0 neuron 1 : activated : " << my_net.layers[0]->neurons[1]->activated << "\n" ;
+        
+        
+        std::cout << "layer 1 neuron 0 : output : " << my_net.layers.back()->neurons[0]->value << "\n";
+        std::cout << "layer 1 neuron 0 : activated : " << my_net.layers.back()->neurons[0]->activated << "\n" ;
+        std::cout << "layer 1 neuron 0 : cost : " << cost << "\n";
+        */
+
+        if( i % (100+1) == 0 ){
+            std::cout << i << " , " << cost << "\n";
+        }
+
+        layer * target = output ;
+
+        my_net.calculate_gradients( input , target ) ;
+
+        //std::cout << "layer 1 neuron 0 : gradient : " << my_net.layers.back()->neurons[0]->gradient << "\n";
+
+        double learning_rate = 1 ;
+        my_net.calculate_delta_weights( learning_rate ) ;  
+
+        /*
+        std::cout << "layer 1 neuron 0 weight 0 : delta : " << 
+            my_net.layers.back()->neurons[0]->delta_weights[0][0][0] << "\n" ;
+        std::cout << "layer 1 neuron 0 weight 1 : delta : " << 
+            my_net.layers.back()->neurons[0]->delta_weights[1][0][0] << "\n";
+        std::cout << "layer 1 neuron 0 weight 2 : delta : " << 
+            my_net.layers.back()->neurons[0]->delta_weights[2][0][0] << "\n";
+        */
+
+        my_net.apply_delta_weights();
+        
+    }
+
+    // testing myself
+    layer * test_input = new layer( 2, layer::input ) ;
+
+    // apply inputs to netork
     
-    layer output ( 1, layer::output ) ;
-    output.neurons[0]->activated = 0.0 ;
+    my_net.layers[0]->neurons[0]->value = 0.0 ;
+    my_net.layers[0]->neurons[1]->value = 0.0 ;
+    my_net.layers[0]->neurons[0]->activated = 0.0 ;
+    my_net.layers[0]->neurons[1]->activated = 0.0 ;
+    my_net.feedforward() ; 
+
+    double cost = my_net.evaluate( my_net.layers[0] ,  xor_dataset.labels[ 0 ]) ; 
+
+    //std::cout << cost << " \n"; 
+    std::cout << my_net.layers.back()->neurons[0]->activated << " \n" ;
+    //std::cout << my_net.layers.back()->neurons[0]->value << " \n" ;
+
+    my_net.layers[0]->neurons[0]->value = 1.0 ;
+    my_net.layers[0]->neurons[1]->value = 0.0 ;
+    my_net.layers[0]->neurons[0]->activated = 1.0 ;
+    my_net.layers[0]->neurons[1]->activated = 0.0 ;
     
-    double cost = my_net.evaluate( &input , &output ) ; 
-    std::cout << "cost : " << cost << " \n" ;
+    my_net.feedforward() ; 
 
-    layer * target = &output ;
+    cost = my_net.evaluate( my_net.layers[0] ,  xor_dataset.labels[ 3 ]) ; 
 
-    my_net.calculate_gradients( &input , target ) ;
-
-
-    /*
-    std::cout << "layer 2 neuron 0 : \n";
-    std::cout << "gradient : " << my_net.layers.back()->neurons[0]->gradient << "\n";
+    //std::cout << cost << " \n"; 
+    std::cout << my_net.layers.back()->neurons[0]->activated << " \n" ;
+    //std::cout << my_net.layers.back()->neurons[0]->value << " \n" ;
     
-    std::cout << "layer 1 neuron 0 : \n";
-    std::cout << "gradient : " << my_net.layers[1]->neurons[0]->gradient << "\n";
-    
-    std::cout << "layer 1 neuron 1 : \n";
-    std::cout << "gradient : " << my_net.layers[1]->neurons[1]->gradient << "\n";
-    */
-   
-    double learning_rate = 0.01 ;
-    my_net.calculate_delta_weights( learning_rate ) ;  
-
-    /*
-    std::cout << "layer 2 neuron 0 (delta_weights): \n";
-    std::cout << "delta 0 : " << (my_net.layers.back()->neurons[0]->delta_weights[0])[0][0] << "\n";
-    std::cout << "delta 1 : " << (my_net.layers.back()->neurons[0]->delta_weights[1])[0][0] << "\n";
-    std::cout << "delta 2 : " << (my_net.layers.back()->neurons[0]->delta_weights[2])[0][0] << "\n";
-    */
-
-    //updating
-
-    // wait();
-    my_net.layers.back()->neurons[0]->weights[0] += (my_net.layers.back()->neurons[0]->delta_weights[0])[0][0] ;
-    my_net.layers.back()->neurons[0]->weights[1] += (my_net.layers.back()->neurons[0]->delta_weights[1])[0][0] ;
-    my_net.layers.back()->neurons[0]->weights[2] += (my_net.layers.back()->neurons[0]->delta_weights[2])[0][0] ;
-
-    cost = my_net.evaluate( &input , &output ) ; 
-    std::cout << "cost : " << cost << " \n" ;
-
 
     return 0;
 }
