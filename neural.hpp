@@ -146,6 +146,10 @@ class neural_net {
         void apply_delta_weights( void );
 
         void apply_inputs( layer * ); 
+
+        void gradient_descent( std::vector< layer * >, std::vector< layer * >, 
+            int, double ) ;
+
 } ;
 
 class dataset {

@@ -263,6 +263,41 @@ void neural_net::apply_delta_weights( void ){
 
 }
 
+void neural_net::gradient_descent( 
+    std::vector< layer *> data,  std::vector< layer *> labels,
+    int batch_size, double learning_rate ){
+
+    int i; 
+    
+    // random number based on memory access
+    static std::default_random_engine generator( (uint64_t)this );       
+    static std::uniform_int_distribution<> distribution(0,  data.size() - 1 );
+
+    // runs 'batchsize' times
+    for(i = 0 ; i < batch_size ; i++){
+
+        // random sample from dataset
+        int random_index = distribution( generator ) ;    // generate number
+
+        //std::cout << "random int: " << random_index << " \n" ; 
+
+        layer * input = data[ random_index ] ;     
+        layer * output = labels[ random_index ] ;  
+        
+        apply_inputs( input ) ;
+        //double cost = my_net.evaluate( input , output ) ; 
+        
+        calculate_gradients( input , output ) ;
+
+        calculate_delta_weights( learning_rate ) ;  
+
+    }
+
+    // apply averaged changes
+    apply_delta_weights();
+    
+}
+
 // default layer constructor
 layer::layer( int num_of_neurons ) {
         
@@ -612,20 +647,23 @@ void neuron::apply_delta_weights(void){
     for( i = 0 ; i < delta_weights.size() ; i++ ){
     
         double sum = 0 ;
-        int batch_size = delta_weights[i]->size();
+        int batch_size = delta_weights[i]->size() ;
 
-        // evalates all deltas from a batch
-        /*
-        for( j = ( batch_size ); j > 0 ; j-- ){
-            sum += delta_weights[i][0][j - 1] ;  
-            delta_weights[i][0].pop_back() ;  
+        // evaluates all deltas from a batch
+        for( j = 0; j < batch_size ; j++ ){
+
+            double delta = delta_weights[i][0].back() ; 
+            delta_weights[i][0].pop_back() ;
+            
+            sum += delta ;  
+              
         }
         
         double average = ( sum / (double)(batch_size) ) ;
-        */
-
-        weights[i] += delta_weights[i][0][0]  ;
-        delta_weights[i][0].pop_back() ;  
+        
+        weights[i] += average ;
+        //weights[i] += delta_weights[i][0][0] ;
+        //delta_weights[i][0].pop_back() ;  
 
     }
 
